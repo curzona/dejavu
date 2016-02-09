@@ -5,7 +5,9 @@ import multiprocessing
 import os
 import traceback
 import sys
+import logging
 
+logger = logging.getLogger(__name__)
 
 class Dejavu(object):
 
@@ -58,7 +60,7 @@ class Dejavu(object):
 
             # don't refingerprint already fingerprinted files
             if decoder.unique_hash(filename) in self.songhashes_set:
-                print "%s already fingerprinted, continuing..." % filename
+                logger.debug("%s already fingerprinted, continuing...", filename)
                 continue
 
             filenames_to_fingerprint.append(filename)
@@ -99,7 +101,7 @@ class Dejavu(object):
         song_name = song_name or songname
         # don't refingerprint already fingerprinted files
         if song_hash in self.songhashes_set:
-            print "%s already fingerprinted, continuing..." % song_name
+            logger.debug("%s already fingerprinted, continuing...", song_name)
         else:
             song_name, hashes, file_hash = _fingerprint_worker(
                 filepath,
@@ -141,8 +143,12 @@ class Dejavu(object):
                 largest_count = diff_counter[diff][sid]
                 song_id = sid
 
-        # extract idenfication
-        song = self.db.get_song_by_id(song_id)
+        if song_id != -1:
+            # extract idenfication
+            song = self.db.get_song_by_id(song_id)
+        else:
+            return None
+
         if song:
             # TODO: Clarify what `get_song_by_id` should return.
             songname = song.get(Dejavu.SONG_NAME, None)
@@ -183,12 +189,12 @@ def _fingerprint_worker(filename, limit=None, song_name=None):
 
     for channeln, channel in enumerate(channels):
         # TODO: Remove prints or change them into optional logging.
-        print("Fingerprinting channel %d/%d for %s" % (channeln + 1,
-                                                       channel_amount,
-                                                       filename))
+        logger.debug("Fingerprinting channel %d/%d for %s" % (channeln + 1,
+                                                              channel_amount,
+                                                              filename))
         hashes = fingerprint.fingerprint(channel, Fs=Fs)
-        print("Finished channel %d/%d for %s" % (channeln + 1, channel_amount,
-                                                 filename))
+        logger.debug("Finished channel %d/%d for %s" % (channeln + 1, channel_amount,
+                                                        filename))
         result |= set(hashes)
 
     return song_name, result, file_hash
